@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HTML → APK Stüdyosu</title>
+<style>
+:root{--bg:#14171c;--panel:#1c2027;--line:#2b313b;--tx:#e8ebf0;--mu:#8d96a5;--ac:#3ddc84;--ac2:#0f3d26;--er:#ff6b6b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 "Segoe UI",system-ui,sans-serif;padding:16px;padding-top:calc(16px + env(safe-area-inset-top,0px))}
+main{max-width:760px;margin:0 auto}
+h1{font-size:26px;margin:8px 0 2px;letter-spacing:-.5px}
+.sub{color:var(--mu);margin:0 0 18px}
+section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+h2{font-size:16px;margin:0 0 12px}
+label{display:block;font-size:13px;color:var(--mu);margin:10px 0 4px}
+input[type=text],input[type=number],input[type=password],select,textarea{width:100%;background:#12151a;color:var(--tx);border:1px solid var(--line);border-radius:9px;padding:10px;font:inherit}
+textarea{min-height:110px;font:12px/1.4 ui-monospace,Consolas,monospace}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:520px){.row{grid-template-columns:1fr}}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:flex;align-items:center;gap:6px;background:#12151a;border:1px solid var(--line);border-radius:20px;padding:6px 12px;font-size:13px;color:var(--tx);margin:0;cursor:pointer}
+.chip input{accent-color:var(--ac)}
+.chip.rt::after{content:"izin sorar";font-size:10px;color:var(--mu)}
+button{background:var(--ac);color:#06210f;border:0;border-radius:10px;padding:11px 16px;font:600 15px inherit;font-family:inherit;cursor:pointer}
+button.sec{background:#12151a;color:var(--tx);border:1px solid var(--line);font-weight:500;font-size:13px;padding:7px 12px}
+button:disabled{opacity:.5}
+.tools{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+#icoPrev{width:72px;height:72px;border-radius:16px;border:1px solid var(--line);background:#000}
+.icorow{display:flex;gap:14px;align-items:center}
+#log{font:12px/1.6 ui-monospace,Consolas,monospace;background:#0d1014;border-radius:10px;padding:10px;max-height:240px;overflow:auto;white-space:pre-wrap;margin-top:12px;display:none}
+#log .ok{color:var(--ac)}#log .er{color:var(--er)}
+.bar{height:6px;background:#12151a;border-radius:4px;margin-top:12px;overflow:hidden;display:none}
+.bar i{display:block;height:100%;width:0;background:var(--ac);transition:width .4s}
+.res{display:none;margin-top:12px;background:var(--ac2);border:1px solid var(--ac);border-radius:10px;padding:12px}
+.res a,.res button{display:inline-block;margin:4px 8px 4px 0;text-decoration:none}
+.res a{background:var(--ac);color:#06210f;padding:10px 14px;border-radius:10px;font-weight:600}
+.note{font-size:12px;color:var(--mu);margin-top:6px}
+.warn{color:#ffd166}
+</style>
+</head>
+<body>
+<main>
+<h1>HTML → APK Stüdyosu</h1>
+<p class="sub">HTML dosyanı yükle, ayarları seç, birkaç dakikada kurulabilir APK al.</p>
+
+<section id="tokSec">
+<h2>GitHub bağlantısı</h2>
+<label for="token">GitHub token (repo + workflow izni)</label>
+<input type="password" id="token" placeholder="ghp_..." autocomplete="off">
+<label class="chip" style="margin-top:8px;width:max-content"><input type="checkbox" id="remember"> Bu cihazda hatırla</label>
+<p class="note">APK’yı GitHub Actions üzerinde derliyoruz. Token sadece api.github.com’a gönderilir.</p>
+</section>
+
+<section>
+<h2>Uygulama</h2>
+<div class="row">
+<div><label for="name">Uygulama adı</label><input type="text" id="name" value="Uygulamam"></div>
+<div><label for="pkg">Paket adı</label><input type="text" id="pkg" value="com.app.uygulamam"></div>
+<div><label for="vn">Sürüm adı</label><input type="text" id="vn" value="1.0.0"></div>
+<div><label for="vc">Sürüm kodu</label><input type="number" id="vc" value="1" min="1"></div>
+<div><label for="ori">Ekran yönü</label><select id="ori"><option value="unspecified">Otomatik</option><option value="portrait">Dikey</option><option value="landscape">Yatay</option><option value="sensor">Sensör</option></select></div>
+<div><label for="tc">Durum çubuğu rengi</label><input type="color" id="tc" value="#14171c" style="width:100%;height:42px;border-radius:9px;border:1px solid var(--line);background:#12151a"></div>
+</div>
+</section>
+
+<section>
+<h2>HTML kaynağı</h2>
+<input type="file" id="htmlFile" accept=".html,.htm,text/html">
+<label for="htmlText">veya kodu buraya yapıştır</label>
+<textarea id="htmlText" placeholder="<!DOCTYPE html>..."></textarea>
+</section>
+
+<section>
+<h2>İkon</h2>
+<div class="icorow">
+<canvas id="icoPrev" width="96" height="96"></canvas>
+<div style="flex:1">
+<input type="file" id="icoFile" accept="image/*">
+<label for="icoBg">İkon arka plan rengi (görsel yoksa harf ikonu)</label>
+<input type="color" id="icoBg" value="#3ddc84" style="width:100%;height:38px;border-radius:9px;border:1px solid var(--line);background:#12151a">
+</div></div>
+</section>
+
+<section>
+<h2>İzinler</h2>
+<div class="tools">
+<button class="sec" id="pAll">Hepsini seç</button>
+<button class="sec" id="pNone">Temizle</button>
+<button class="sec" id="pRec">Önerilen</button>
+</div>
+<div class="chips" id="perms"></div>
+<p class="note">“izin sorar” yazanlar uygulama açılınca kullanıcıdan onay ister. İnternet izni her zaman eklenir.</p>
+</section>
+
+<section>
+<h2>Davranış</h2>
+<div class="chips">
+<label class="chip"><input type="checkbox" id="fs"> Tam ekran</label>
+<label class="chip"><input type="checkbox" id="ka"> Ekran kapanmasın</label>
+<label class="chip"><input type="checkbox" id="el"> Dış linkleri tarayıcıda aç</label>
+<label class="chip"><input type="checkbox" id="zm"> Yakınlaştırma</label>
+<label class="chip"><input type="checkbox" id="cl" checked> http (şifresiz) bağlantılara izin ver</label>
+<label class="chip"><input type="checkbox" id="priv" autocomplete="off"> Özel repo (indirme için GitHub girişi gerekir)</label>
+</div>
+</section>
+
+<button id="go" style="width:100%;padding:14px;font-size:16px">APK oluştur</button>
+<div class="bar" id="bar"><i></i></div>
+<div id="log"></div>
+<div class="res" id="res"></div>
+</main>
+
+<script type="text/plain" id="t-settings">pluginManagement {
+    repositories { google(); mavenCentral(); gradlePluginPortal() }
+}
+dependencyResolutionManagement {
+    repositories { google(); mavenCentral() }
+}
+rootProject.name = "WebApp"
+include ':app'
+</script>
+<script type="text/plain" id="t-root">plugins {
+    id 'com.android.application' version '8.3.2' apply false
+}
+</script>
+<script type="text/plain" id="t-props">org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
+android.useAndroidX=true
+android.nonTransitiveRClass=true
+</script>
+<script type="text/plain" id="t-app">plugins { id 'com.android.application' }
+
+android {
+    namespace '__PKG__'
+    compileSdk 34
+    defaultConfig {
+        applicationId '__PKG__'
+        minSdk 24
+        targetSdk 34
+        versionCode __VC__
+        versionName '__VN__'
+    }
+    signingConfigs {
+        release {
+            storeFile file('ks.jks')
+            storePassword 'android'
+            keyAlias 'key0'
+            keyPassword 'android'
+            enableV1Signing true
+            enableV2Signing true
+            enableV3Signing true
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.10.0'
+}
+</script>
+<script type="text/plain" id="t-manifest"><?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+__PERMS__
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
+    <uses-feature android:name="android.hardware.microphone" android:required="false"/>
+    <uses-feature android:name="android.hardware.location" android:required="false"/>
+    <uses-feature android:name="android.hardware.location.gps" android:required="false"/>
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false"/>
+    <uses-feature android:name="android.hardware.nfc" android:required="false"/>
+    <uses-feature android:name="android.hardware.telephony" android:required="false"/>
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:label="__LABEL__"
+        android:usesCleartextTraffic="__CLEAR__"
+        android:hardwareAccelerated="true"
+        android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:screenOrientation="__ORI__"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|keyboardHidden|keyboard|screenLayout|smallestScreenSize|uiMode">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
+</script>
+<script type="text/plain" id="t-java">package __PKG__;
+
+import android.app.Activity;
+import android.app.DownloadManager;
+import android.content.Context;
+import android.content.Intent;
+import android.graphics.Color;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Environment;
+import android.os.Vibrator;
+import android.view.View;
+import android.view.WindowManager;
+import android.webkit.CookieManager;
+import android.webkit.GeolocationPermissions;
+import android.webkit.JavascriptInterface;
+import android.webkit.PermissionRequest;
+import android.webkit.URLUtil;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
+import android.widget.Toast;
+import androidx.webkit.WebViewAssetLoader;
+
+public class MainActivity extends Activity {
+    static final boolean FULLSCREEN = __FS__;
+    static final boolean KEEP_AWAKE = __KA__;
+    static final boolean EXT_LINKS = __EL__;
+    static final boolean ZOOM = __ZM__;
+    static final String[] RT = new String[]{ __RT__ };
+    static final String HOST = "appassets.androidplatform.net";
+
+    WebView web;
+    FrameLayout root;
+    ValueCallback<Uri[]> fileCb;
+    View customView;
+    WebChromeClient.CustomViewCallback customCb;
+
+    @Override
+    protected void onCreate(Bundle b) {
+        super.onCreate(b);
+        getWindow().setStatusBarColor(Color.parseColor("__TC__"));
+        if (KEEP_AWAKE) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        root = new FrameLayout(this);
+        web = new WebView(this);
+        root.addView(web, new FrameLayout.LayoutParams(-1, -1));
+        setContentView(root);
+        setupWeb();
+        if (Build.VERSION.SDK_INT >= 23 && RT.length > 0) requestPermissions(RT, 2);
+        web.loadUrl("https://" + HOST + "/assets/index.html");
+    }
+
+    void setupWeb() {
+        WebSettings s = web.getSettings();
+        s.setJavaScriptEnabled(true);
+        s.setDomStorageEnabled(true);
+        s.setDatabaseEnabled(true);
+        s.setAllowFileAccess(true);
+        s.setAllowContentAccess(true);
+        s.setGeolocationEnabled(true);
+        s.setMediaPlaybackRequiresUserGesture(false);
+        s.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        s.setUseWideViewPort(true);
+        s.setLoadWithOverviewMode(true);
+        s.setSupportZoom(ZOOM);
+        s.setBuiltInZoomControls(ZOOM);
+        s.setDisplayZoomControls(false);
+        web.addJavascriptInterface(new Bridge(), "Android");
+        CookieManager.getInstance().setAcceptCookie(true);
+        CookieManager.getInstance().setAcceptThirdPartyCookies(web, true);
+
+        final WebViewAssetLoader loader = new WebViewAssetLoader.Builder()
+            .setDomain(HOST)
+            .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
+            .build();
+
+        web.setWebViewClient(new WebViewClient() {
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) {
+                return loader.shouldInterceptRequest(r.getUrl());
+            }
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
+                Uri u = r.getUrl();
+                String sc = u.getScheme();
+                boolean http = "http".equals(sc) || "https".equals(sc);
+                if (http && (HOST.equals(u.getHost()) || !EXT_LINKS)) return false;
+                try { startActivity(new Intent(Intent.ACTION_VIEW, u)); } catch (Exception e) { }
+                return true;
+            }
+        });
+
+        web.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onPermissionRequest(final PermissionRequest r) {
+                runOnUiThread(() -> r.grant(r.getResources()));
+            }
+            @Override
+            public void onGeolocationPermissionsShowPrompt(String o, GeolocationPermissions.Callback cb) {
+                cb.invoke(o, true, false);
+            }
+            @Override
+            public boolean onShowFileChooser(WebView w, ValueCallback<Uri[]> cb, FileChooserParams p) {
+                if (fileCb != null) fileCb.onReceiveValue(null);
+                fileCb = cb;
+                try {
+                    startActivityForResult(p.createIntent(), 1);
+                } catch (Exception e) {
+                    fileCb = null;
+                    return false;
+                }
+                return true;
+            }
+            @Override
+            public void onShowCustomView(View v, CustomViewCallback cb) {
+                if (customView != null) { cb.onCustomViewHidden(); return; }
+                customView = v;
+                customCb = cb;
+                web.setVisibility(View.GONE);
+                root.addView(v);
+            }
+            @Override
+            public void onHideCustomView() {
+                if (customView == null) return;
+                root.removeView(customView);
+                customView = null;
+                web.setVisibility(View.VISIBLE);
+                if (customCb != null) customCb.onCustomViewHidden();
+            }
+        });
+
+        web.setDownloadListener((url, ua, cd, mime, len) -> {
+            try {
+                if (url.startsWith("blob:") || url.startsWith("data:")) {
+                    Toast.makeText(this, "Bu indirme türü desteklenmiyor", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                DownloadManager.Request q = new DownloadManager.Request(Uri.parse(url));
+                q.setMimeType(mime);
+                String ck = CookieManager.getInstance().getCookie(url);
+                if (ck != null) q.addRequestHeader("Cookie", ck);
+                q.addRequestHeader("User-Agent", ua);
+                String fn = URLUtil.guessFileName(url, cd, mime);
+                q.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+                q.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fn);
+                ((DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE)).enqueue(q);
+                Toast.makeText(this, "İndiriliyor: " + fn, Toast.LENGTH_SHORT).show();
+            } catch (Exception e) {
+                try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); } catch (Exception x) { }
+            }
+        });
+    }
+
+    public class Bridge {
+        @JavascriptInterface public void toast(String m) {
+            Toast.makeText(MainActivity.this, m, Toast.LENGTH_SHORT).show();
+        }
+        @JavascriptInterface public void vibrate(long ms) {
+            try { ((Vibrator) getSystemService(Context.VIBRATOR_SERVICE)).vibrate(ms); } catch (Exception e) { }
+        }
+        @JavascriptInterface public void share(String t) {
+            Intent i = new Intent(Intent.ACTION_SEND);
+            i.setType("text/plain");
+            i.putExtra(Intent.EXTRA_TEXT, t);
+            startActivity(Intent.createChooser(i, null));
+        }
+        @JavascriptInterface public void openUrl(String u) {
+            try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(u))); } catch (Exception e) { }
+        }
+        @JavascriptInterface public void exit() { finish(); }
+    }
+
+    @Override
+    protected void onActivityResult(int rq, int rs, Intent d) {
+        if (rq == 1 && fileCb != null) {
+            fileCb.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(rs, d));
+            fileCb = null;
+        }
+        super.onActivityResult(rq, rs, d);
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean f) {
+        super.onWindowFocusChanged(f);
+        if (f && FULLSCREEN) {
+            getWindow().getDecorView().setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (customView != null) { web.getWebChromeClient().onHideCustomView(); }
+        else if (web.canGoBack()) web.goBack();
+        else super.onBackPressed();
+    }
+
+    @Override protected void onResume() { super.onResume(); web.onResume(); }
+    @Override protected void onPause() { web.onPause(); super.onPause(); }
+    @Override protected void onDestroy() { web.destroy(); super.onDestroy(); }
+}
+</script>
+<script type="text/plain" id="t-ks">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</script>
+<script type="text/plain" id="t-wf">name: Build APK
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
+      - name: Build
+        run: gradle assembleRelease --no-daemon --stacktrace
+      - name: Rename
+        run: cp app/build/outputs/apk/release/app-release.apk app.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: app.apk
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: APK build ${{ github.run_number }}
+          files: app.apk
+</script>
+
+<script>
+/* Token'i herkese açık kullanmak istersen buraya yaz (önerilmez: sayfayı açan herkes görür). */
+const EMBEDDED_TOKEN = "";
+
+const $ = id => document.getElementById(id);
+const T = id => $(id).textContent;
+const fill = (s, m) => s.replace(/__(\w+)__/g, (x, k) => k in m ? m[k] : x);
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// [izin, etiket, runtime, varsayılan]
+const PERMS = [
+ ['INTERNET','İnternet',0,1],['ACCESS_NETWORK_STATE','Ağ durumu',0,1],['ACCESS_WIFI_STATE','Wi‑Fi durumu',0,0],
+ ['CHANGE_WIFI_STATE','Wi‑Fi değiştir',0,0],['CAMERA','Kamera',1,0],['RECORD_AUDIO','Mikrofon',1,0],
+ ['MODIFY_AUDIO_SETTINGS','Ses ayarları',0,0],['ACCESS_FINE_LOCATION','Hassas konum',1,0],['ACCESS_COARSE_LOCATION','Yaklaşık konum',1,0],
+ ['READ_EXTERNAL_STORAGE','Depolama oku',1,0],['WRITE_EXTERNAL_STORAGE','Depolama yaz',1,0],['READ_MEDIA_IMAGES','Fotoğraflar',1,0],
+ ['READ_MEDIA_VIDEO','Videolar',1,0],['READ_MEDIA_AUDIO','Ses dosyaları',1,0],['POST_NOTIFICATIONS','Bildirim',1,0],
+ ['VIBRATE','Titreşim',0,1],['WAKE_LOCK','Uyanık tut',0,0],['BLUETOOTH','Bluetooth',0,0],['BLUETOOTH_ADMIN','Bluetooth yönetimi',0,0],
+ ['BLUETOOTH_CONNECT','Bluetooth bağlan',1,0],['BLUETOOTH_SCAN','Bluetooth tara',1,0],['NFC','NFC',0,0],['USE_BIOMETRIC','Biyometrik',0,0],
+ ['READ_CONTACTS','Rehber oku',1,0],['WRITE_CONTACTS','Rehber yaz',1,0],['READ_CALENDAR','Takvim oku',1,0],['WRITE_CALENDAR','Takvim yaz',1,0],
+ ['READ_PHONE_STATE','Telefon durumu',1,0],['CALL_PHONE','Arama yap',1,0],['SEND_SMS','SMS gönder',1,0],['READ_SMS','SMS oku',1,0],
+ ['RECEIVE_SMS','SMS al',1,0],['BODY_SENSORS','Vücut sensörleri',1,0],['ACTIVITY_RECOGNITION','Aktivite tanıma',1,0],
+ ['FOREGROUND_SERVICE','Ön plan servisi',0,0],['RECEIVE_BOOT_COMPLETED','Açılışta başlat',0,0],['SYSTEM_ALERT_WINDOW','Üstte göster',0,0],
+ ['REQUEST_INSTALL_PACKAGES','APK kur',0,0],['SET_WALLPAPER','Duvar kağıdı',0,0]
+];
+const REC = ['INTERNET','ACCESS_NETWORK_STATE','VIBRATE','CAMERA','RECORD_AUDIO','ACCESS_FINE_LOCATION','ACCESS_COARSE_LOCATION','READ_MEDIA_IMAGES','READ_MEDIA_VIDEO','POST_NOTIFICATIONS'];
+$('perms').innerHTML = PERMS.map(p => `<label class="chip${p[2]?' rt':''}"><input type="checkbox" value="${p[0]}" ${p[3]?'checked':''}> ${p[1]}</label>`).join('');
+const setPerms = f => document.querySelectorAll('#perms input').forEach(c => c.checked = f(c.value));
+$('pAll').onclick = () => setPerms(() => true);
+$('pNone').onclick = () => setPerms(v => v === 'INTERNET');
+$('pRec').onclick = () => setPerms(v => REC.includes(v));
+
+$('priv').checked = false;
+addEventListener('pageshow', () => setTimeout(() => { $('priv').checked = false; }, 80));
+// token
+if (EMBEDDED_TOKEN) $('tokSec').style.display = 'none';
+else { const t = localStorage.getItem('gh_token'); if (t) { $('token').value = t; $('remember').checked = true; } }
+
+// paket adı
+const slug = s => s.toLowerCase().replace(/ç/g,'c').replace(/ğ/g,'g').replace(/ı/g,'i').replace(/ö/g,'o').replace(/ş/g,'s').replace(/ü/g,'u').replace(/[^a-z0-9]+/g,'');
+let pkgEdited = false;
+$('pkg').oninput = () => pkgEdited = true;
+$('name').oninput = () => { if (!pkgEdited) $('pkg').value = 'com.app.' + (slug($('name').value).replace(/^[0-9]+/,'') || 'uygulama'); };
+
+// html yükle
+$('htmlFile').onchange = async e => { const f = e.target.files[0]; if (f) $('htmlText').value = await f.text(); };
+
+// ikon
+let iconImg = null;
+function drawIcon(size) {
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const x = c.getContext('2d');
+  if (iconImg) {
+    x.fillStyle = '#fff'; x.fillRect(0,0,size,size);
+    const m = Math.min(iconImg.width, iconImg.height), sx = (iconImg.width-m)/2, sy = (iconImg.height-m)/2;
+    x.drawImage(iconImg, sx, sy, m, m, 0, 0, size, size);
+  } else {
+    x.fillStyle = $('icoBg').value; x.fillRect(0,0,size,size);
+    x.fillStyle = '#fff'; x.font = `700 ${size*0.55}px system-ui,sans-serif`;
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText(($('name').value.trim()[0] || 'A').toUpperCase(), size/2, size/2 + size*0.04);
+  }
+  return c;
+}
+function prev() {
+  const p = $('icoPrev'), x = p.getContext('2d');
+  x.clearRect(0,0,96,96); x.drawImage(drawIcon(96),0,0);
+}
+$('icoFile').onchange = e => {
+  const f = e.target.files[0]; if (!f) { iconImg = null; prev(); return; }
+  const im = new Image(); im.onload = () => { iconImg = im; prev(); }; im.src = URL.createObjectURL(f);
+};
+$('icoBg').oninput = prev; $('name').addEventListener('input', prev); prev();
+
+// log
+const logEl = $('log');
+function log(m, c) { logEl.style.display = 'block'; const d = document.createElement('div'); if (c) d.className = c; d.textContent = m; logEl.appendChild(d); logEl.scrollTop = logEl.scrollHeight; }
+function prog(p) { $('bar').style.display = 'block'; $('bar').firstElementChild.style.width = p + '%'; }
+
+// github
+let TOKEN = '';
+async function gh(path, opt = {}) {
+  const r = await fetch('https://api.github.com' + path, { ...opt, headers: { Authorization: 'Bearer ' + TOKEN, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(opt.headers || {}) } });
+  if (!r.ok) { let m = ''; try { m = (await r.json()).message; } catch (e) {} throw new Error(r.status + ' ' + m); }
+  return r.status === 204 ? null : r.json();
+}
+const b64s = s => { const b = new TextEncoder().encode(s); let t = ''; for (let i = 0; i < b.length; i += 0x8000) t += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(t); };
+async function put(o, r, path, content, tries = 4) {
+  for (let i = 0; i < tries; i++) {
+    try {
+      return await gh(`/repos/${o}/${r}/contents/${path.split('/').map(encodeURIComponent).join('/')}`, { method: 'PUT', body: JSON.stringify({ message: 'add ' + path, content }) });
+    } catch (e) { if (i === tries - 1) throw e; await sleep(1500); }
+  }
+}
+
+$('go').onclick = async () => {
+  const btn = $('go'); logEl.innerHTML = ''; $('res').style.display = 'none';
+  try {
+    TOKEN = ($('token').value.trim() || EMBEDDED_TOKEN).trim();
+    if (!TOKEN) throw new Error('GitHub token gerekli.');
+    if ($('token').value.trim()) { if ($('remember').checked) localStorage.setItem('gh_token', TOKEN); else localStorage.removeItem('gh_token'); }
+    const html = $('htmlText').value;
+    if (html.trim().length < 5) throw new Error('HTML kaynağı boş.');
+    const name = $('name').value.trim() || 'Uygulama';
+    const pkg = $('pkg').value.trim();
+    const bad = ['abstract','assert','boolean','break','byte','case','catch','char','class','const','continue','default','do','double','else','enum','extends','final','finally','float','for','goto','if','implements','import','instanceof','int','interface','long','native','new','package','private','protected','public','return','short','static','strictfp','super','switch','synchronized','this','throw','throws','transient','try','void','volatile','while'];
+    if (!/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/.test(pkg) || pkg.split('.').some(s => bad.includes(s))) throw new Error('Paket adı geçersiz. Örnek: com.app.uygulamam');
+    const vc = Math.max(1, parseInt($('vc').value) || 1);
+    const vn = $('vn').value.trim().replace(/[^\w.\-]/g, '') || '1.0.0';
+    btn.disabled = true; prog(3);
+
+    const sel = [...document.querySelectorAll('#perms input:checked')].map(c => c.value);
+    if (!sel.includes('INTERNET')) sel.unshift('INTERNET');
+    const permXml = sel.map(p => `    <uses-permission android:name="android.permission.${p}"/>`).join('\n');
+    const rt = PERMS.filter(p => p[2] && sel.includes(p[0])).map(p => `"android.permission.${p[0]}"`).join(', ');
+    const B = v => v ? 'true' : 'false';
+    const m = {
+      PKG: pkg, VC: vc, VN: vn, LABEL: esc(name), PERMS: permXml, RT: rt, ORI: $('ori').value,
+      CLEAR: B($('cl').checked), FS: B($('fs').checked), KA: B($('ka').checked), EL: B($('el').checked),
+      ZM: B($('zm').checked), TC: $('tc').value
+    };
+
+    log('GitHub hesabı kontrol ediliyor...');
+    const me = await gh('/user'); log('Giriş: ' + me.login, 'ok'); prog(8);
+
+    const rname = 'apk-' + (slug(name) || 'app') + '-' + Date.now().toString(36);
+    log('Repo oluşturuluyor: ' + rname);
+    const repo = await gh('/user/repos', { method: 'POST', body: JSON.stringify({ name: rname, private: $('priv').checked, auto_init: true, description: 'HTML to APK build' }) });
+    const o = repo.owner.login, r = repo.name; await sleep(2000); prog(14);
+
+    const files = [
+      ['settings.gradle', b64s(T('t-settings'))],
+      ['build.gradle', b64s(T('t-root'))],
+      ['gradle.properties', b64s(T('t-props'))],
+      ['app/build.gradle', b64s(fill(T('t-app'), m))],
+      ['app/src/main/AndroidManifest.xml', b64s(fill(T('t-manifest'), m))],
+      ['app/src/main/java/' + pkg.replace(/\./g, '/') + '/MainActivity.java', b64s(fill(T('t-java'), m))],
+      ['app/src/main/assets/index.html', b64s(html)],
+      ['app/ks.jks', T('t-ks').trim()]
+    ];
+    [['mdpi',48],['hdpi',72],['xhdpi',96],['xxhdpi',144],['xxxhdpi',192]].forEach(([d, s]) =>
+      files.push([`app/src/main/res/mipmap-${d}/ic_launcher.png`, drawIcon(s).toDataURL('image/png').split(',')[1]]));
+    files.push(['.github/workflows/build.yml', b64s(T('t-wf'))]); // en son: derlemeyi tetikler
+
+    for (let i = 0; i < files.length; i++) {
+      log('Yükleniyor: ' + files[i][0]);
+      await put(o, r, files[i][0], files[i][1]);
+      prog(14 + Math.round((i + 1) / files.length * 26));
+    }
+    log('Dosyalar yüklendi, derleme başlıyor...', 'ok');
+
+    let run = null;
+    for (let i = 0; i < 60 && !run; i++) {
+      await sleep(4000);
+      const l = await gh(`/repos/${o}/${r}/actions/runs?per_page=1`);
+      if (l.total_count > 0) run = l.workflow_runs[0];
+    }
+    if (!run) throw new Error('Derleme başlatılamadı. Token’da "workflow" izni var mı?');
+    log('Derleme: ' + run.html_url);
+
+    let last = '', t0 = Date.now();
+    while (true) {
+      await sleep(6000);
+      run = await gh(`/repos/${o}/${r}/actions/runs/${run.id}`);
+      if (run.status !== last) { last = run.status; log('Durum: ' + run.status); }
+      prog(Math.min(92, 40 + (Date.now() - t0) / 1000 / 4));
+      if (run.status === 'completed') break;
+      if (Date.now() - t0 > 25 * 60e3) throw new Error('Zaman aşımı. Derleme: ' + run.html_url);
+    }
+    if (run.conclusion !== 'success') throw new Error('Derleme başarısız (' + run.conclusion + '). Loglar: ' + run.html_url);
+
+    log('APK hazır!', 'ok'); prog(100);
+    const rel = await gh(`/repos/${o}/${r}/releases/latest`);
+    const as = rel.assets[0];
+    const box = $('res'); box.style.display = 'block';
+    box.innerHTML = `<b>${esc(name)}.apk hazır</b><br>`;
+    const url = as.browser_download_url;
+    const msg = document.createElement('div'); msg.className = 'note';
+    const mk = (t, sec, fn) => { const x = document.createElement('button'); x.textContent = t; if (sec) x.className = 'sec'; x.onclick = fn; return x; };
+    const showLink = () => {
+      const a = document.createElement('a'); a.href = url; a.textContent = 'APK’yı indir (dokun)';
+      box.insertBefore(a, msg);
+      box.appendChild(mk('Linki kopyala', true, async () => { try { await navigator.clipboard.writeText(url); msg.textContent = 'Link kopyalandı. Tarayıcına yapıştırıp aç.'; } catch (e) { msg.textContent = url; } }));
+    };
+    box.appendChild(msg);
+    if (!repo.private) { showLink(); }
+    else {
+      const pb = mk('Herkese açık yap ve indir', false, async () => {
+        pb.disabled = true;
+        try {
+          await gh(`/repos/${o}/${r}`, { method: 'PATCH', body: JSON.stringify({ private: false }) });
+          pb.remove(); showLink();
+          msg.textContent = 'Repo herkese açıldı, indirme linki hazır. İndirdikten sonra aşağıdan tekrar özel yapabilirsin.';
+          box.appendChild(mk('Repoyu tekrar özel yap', true, async () => {
+            try { await gh(`/repos/${o}/${r}`, { method: 'PATCH', body: JSON.stringify({ private: true }) }); msg.textContent = 'Repo tekrar özel.'; } catch (e) { msg.textContent = 'Olmadı: ' + e.message; }
+          }));
+        } catch (e) { pb.disabled = false; msg.textContent = 'Olmadı: ' + e.message; }
+      });
+      box.insertBefore(pb, msg);
+      msg.textContent = 'Repo özel olduğu için tarayıcıdan doğrudan indirme mümkün değil (GitHub CORS izni vermiyor). Önce repoyu geçici olarak açıyoruz.';
+    }
+  } catch (e) {
+    log('Hata: ' + e.message, 'er');
+    if (String(e.message).startsWith('401')) { $('tokSec').style.display = 'block'; log('Token geçersiz veya iptal edilmiş. Yukarıdaki alana yeni bir token yapıştır (repo + workflow izinli).', 'er'); $('token').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  } finally { btn.disabled = false; }
+};
+</script>
+</body>
+</html>
